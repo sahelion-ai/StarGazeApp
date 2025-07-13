@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { getWeather } from '$lib/weather';
   
   // State variables
   let score = null;
@@ -7,6 +8,7 @@
   let error = null;
   let map = null;
   let userPosition = null;
+  let weatherData = null;
 
   // Initialize map when component mounts
   onMount(() => {
@@ -22,10 +24,16 @@
     });
   }
 
+  function calculateScore(weather) {
+    // Simple scoring based on cloud cover
+    return Math.floor((100 - weather.clouds.all) / 10);
+  }
+
   async function checkStargazing() {
     isLoading = true;
     score = null;
     error = null;
+    weatherData = null;
 
     try {
       // Get user location
@@ -46,6 +54,7 @@
 
       // Center map on user's location
       if (map) {
+        const L = await import('leaflet');
         map.setView([userPosition.lat, userPosition.lng], 10);
         L.marker([userPosition.lat, userPosition.lng])
           .addTo(map)
@@ -53,8 +62,9 @@
           .openPopup();
       }
 
-      // Calculate random score (will replace with real data later)
-      score = Math.floor(Math.random() * 10);
+      // Get weather data
+      weatherData = await getWeather(userPosition.lat, userPosition.lng);
+      score = calculateScore(weatherData);
       
     } catch (err) {
       error = "Could not get your location. Please enable permissions.";
@@ -76,6 +86,13 @@
 
   {#if error}
     <div class="error">{error}</div>
+  {/if}
+
+  {#if weatherData}
+    <div class="weather-info">
+      <p>Cloud Cover: {weatherData.clouds.all}%</p>
+      <p>Humidity: {weatherData.main.humidity}%</p>
+    </div>
   {/if}
 
   {#if score !== null}
@@ -135,6 +152,13 @@
     font-size: 1.2rem;
     padding: 1rem;
     background: #f5f5f5;
+    border-radius: 8px;
+  }
+  
+  .weather-info {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: #f0f8ff;
     border-radius: 8px;
   }
   
